@@ -29,7 +29,7 @@ def run_gen_error_SE(obj):
     
 
 ### FOR THE DEMO 
-N_step_AMP = 200 # max number of iterations
+N_step_AMP = 250 # max number of iterations
 print_Running = True
 
 
