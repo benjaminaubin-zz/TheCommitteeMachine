@@ -33,12 +33,12 @@ N_step_AMP = 250 # max number of iterations
 print_Running = True
 
 
-demo = False
+demo = True
 if not demo : 
     K = 2 
     PW_choice = 'binary'
     N = 10000 
     alpha = 1.8
 
-    #obj_AMP = run_AMP(K,PW_choice,N,alpha,print_Running)
+    obj_AMP = run_AMP(K,PW_choice,N,alpha,print_Running)
     #obj_SE = run_SE(K,PW_choice,alpha,print_Running)
