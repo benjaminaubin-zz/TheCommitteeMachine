@@ -6,3 +6,6 @@
 Heuristic tools from statistical physics have been used in the past to locate the phase transitions and compute the optimal learning and generalization errors in the teacher-student scenario in multi-layer neural networks. In this contribution, we provide a rigorous justification of these approaches for a two-layers neural network model called the committee machine. We also introduce a version of the approximate message passing (AMP) algorithm for the committee machine that allows to perform optimal learning in polynomial time for a large set of parameters. We find that there are regimes in which a low generalization error is information-theoretically achievable while the AMP algorithm fails to deliver it; strongly suggesting that no efficient algorithm exists for those cases, and unveiling a large computational gap.
 
 ArXiv link: https://arxiv.org
+
+
+We provide a demo of the AMP algorithm for the committee machine at K=2 and compare it to its State Evolution in the notebook 'Demo_AMP_SE_K=2.ipynb'.

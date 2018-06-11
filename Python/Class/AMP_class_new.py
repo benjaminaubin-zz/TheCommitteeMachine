@@ -1,8 +1,16 @@
+from libraries import *
+
 # gout
 channel = 'sign-sign'
-from gout_sign_sign import *
-from Yhat_generror_K2 import *
-from gout_MC import *
+if channel == 'sign-sign' :
+	from gout_sign_sign import *
+	from gout_sign_sign_largeK import *
+	from Yhat_generror_K2 import *
+	from gout_sign_sign_complex import *
+	from gout_MC import *
+if channel == 'linear-relu' :
+	from gout_linear_relu import * 
+
 
 ################################## SAVE OBJECT ##################################
 def save_object(obj,filename_object):
@@ -17,7 +25,7 @@ def load_object(filename_object):
 
 ################################### AMP CLASS ###################################
 class ApproximateMessagePassing(object):
-	def __init__(self,K=1,PW_choice='binary',N=1000,alpha=1,MC_activated=False,seed=False,save_backup_running=True,print_Running=True):
+	def __init__(self,K=1,PW_choice='binary',N=1000,alpha=1,MC_activated=False,seed=False,save_backup_running=True,print_Running=True,parity=False):
 		## Parameters
 		self.K = K 
 		self.N = N
@@ -25,6 +33,9 @@ class ApproximateMessagePassing(object):
 		self.P = int(self.N*self.alpha)
 		self.channel = channel  #'sign-sign' or 'linear-relu'
 		self.sigma = 0.001 # variance in the channel to repalce the Dirac delta
+
+		self.parity = parity # if True y =+1 if (y1>0 AND y2>0) OR (y1<0 AND y2<0)
+		print('parity',self.parity)
 
 		## Seed 
 		self.seed = seed
@@ -46,10 +57,11 @@ class ApproximateMessagePassing(object):
 
 		## Path
 		self.path_Fig = 'Figures/'
-		if not self.MC_activated :
-			self.path_BackupObj = 'Data/BackupObj_AMP_'+ PW_choice +'_K='+ str(K)+'/' 
+		if self.parity and self.K==2 : 
+			self.path_BackupObj = 'Data/BackupObj_AMP_'+ PW_choice +'_K='+ str(K)+'_parity/' 
 		else : 
-			self.path_BackupObj = 'Data/BackupObj_AMP_MC_'+ PW_choice +'_K='+ str(K)+'/' 
+			self.path_BackupObj = 'Data/BackupObj_AMP_'+ PW_choice +'_K='+ str(K)+'/' 
+
 		if not os.path.exists(self.path_BackupObj):
 			os.makedirs(self.path_BackupObj) 
 
@@ -76,8 +88,16 @@ class ApproximateMessagePassing(object):
 		self.borne_sup = +10
 
 		## Convergence of the algorithm
-		self.precision_q = 1e-7
-		self.N_step_AMP = 2000
+		if not self.MC_activated :
+			self.precision_q = 1e-5
+			self.N_step_AMP = 1000
+		else : 
+			if self.K <=2 :
+				#self.precision_q = 1e-5
+				self.N_step_AMP = 2000
+			else :
+				self.precision_q = 1e-4
+				self.N_step_AMP = 100
 		self.precision_What = 1e-2
 
 		## Thresholding 
@@ -86,8 +106,8 @@ class ApproximateMessagePassing(object):
 		self.threshold_q_stop = 0.995
 
 		## Damping
-		self.damping_activated = False
-		self.damping_coef = 0.1
+		self.damping_activated = True
+		self.damping_coef = 0.5
 
 		## Data: gaussian with zero mean and variance 1/N
 		self.T_X = 0 # zero mean 
@@ -118,6 +138,11 @@ class ApproximateMessagePassing(object):
 		self.evolution_overlap = []
 		self.q = np.zeros((self.K,self.K))
 
+		# Committee symmetry
+		self.qd = 0.25
+		self.qa = 0.1
+		self.q = self.qd * np.identity(self.K) + self.qa/self.K * np.ones((self.K,self.K))
+
 	############## Generate data ##################
 	def generate_W2_W1(self):
 		### Generate W2^*, W1^*
@@ -146,7 +171,10 @@ class ApproximateMessagePassing(object):
 		return self.X
 	# Pout for sign-sign
 	def Phi_1(self,z1):
-		resul = 1*(z1>0) -1*(z1<0) + 0*(z1==0)
+		if self.parity :
+			resul = 1*(z1>0) +1*(z1<0) + 0*(z1==0)
+		else :
+			resul = 1*(z1>0) -1*(z1<0) + 0*(z1==0)
 		return resul
 	def Phi_2(self,z2):
 		resul = 1*(z2>0) -1*(z2<0) + 0*(z2==0)
@@ -158,7 +186,6 @@ class ApproximateMessagePassing(object):
 		pout = np.exp( -1/(2*self.sigma**2)* ( yl - self.Phi_1(z1) )**2 )
 		pout = pout.reshape(1)
 		return pout
-
 	def phi_out(self,X_new):
 		z = self.W2.dot(X_new)
 		z = z.reshape(self.K,1)
@@ -166,7 +193,6 @@ class ApproximateMessagePassing(object):
 		z1 = self.W1.transpose().dot(self.Phi_2(z))
 		phi_out = self.Phi_1(z1) 
 		return phi_out
-	
 	def generate_Y(self):
 		Z = self.W2.dot(self.X)
 		#print('Z=',Z)
@@ -184,56 +210,43 @@ class ApproximateMessagePassing(object):
 	############## Initialisation ##################
 	# Global intitialization
 	def initialization(self):
-		print('Start initialization')
 		if self.print_Initialization :
 			print('################# INITIALIZATION #################','\n')
 			print('### Generate X, Y, W2, W1 ###')
 
-		mode = 1
-
-		if mode == 2 : 
-			print('Mode 2')
-			try : 
-				path = 'Data/BackupObj_AMP_'+ self.PW_choice +'_K='+ str(self.K)+'/'
-				self.get_all_backup(path)
-				print(self.tab_alpha)
-				tab = self.tab_alpha
-				index = (np.abs(tab-self.alpha)).argmin()
-				print('Succeeded to load old objects : ','Nearest alpha=',tab[index])
-				nearest_obj = load_object('Data/BackupObj_AMP_'+ self.PW_choice +'_K='+ str(self.K)+'/'+self.tab_files[index])
-				dict_ = {key:value for key, value in nearest_obj.__dict__.items()}
-				print(dict_)
-				#self.initialization_backup(nearest_obj)
-
-			except :
-				print('Mode 2 Failed')
-				mode = 1
-
-		if mode == 1 :
-			self.generate_W2_W1()
-			self.generate_X()
-			self.generate_Y()
+		self.generate_W2_W1()
+		self.generate_X()
+		self.generate_Y()
 		
-			self.initialization_What_Chat()
-			self.initialization_V_omega()
-			self.check_V_is_definite_positive()
+		### Initialization What, Chat
+		self.initialization_What_Chat()
 
-			self.initialization_gout_dgout() 
+		### Initialization V, omega
+		## Removing the gout term in omega
+		#self.initialization_V_omega_modif()
+		## Keeping the gout term in omega
+		self.initialization_V_omega()
+		## Check V is def positive
+		self.check_V_is_definite_positive()
 
-			self.initialization_Sigma_T()
+		### Initialization gout, dgout
+		self.initialization_gout_dgout() 
+
+		### Initialization Sigma, T
+		self.initialization_Sigma_T()
 
 		if self.print_Initialization:
 			print('############ INITIALIZATION COMPLETED ############','\n')
-		print('Successful initialization','\n')
 	# Single intitialization
 	def initialization_What_Chat(self):
 		W_hat = np.zeros((self.K,self.N))
 		C_hat = np.zeros((self.K,self.K,self.N))
 		for i in range(self.N):
 			if self.initialization_Truth : 
-				noise = 0.1
+				noise = 0.01
 				W_hat[:,i] = self.W2[:,i] + noise * np.random.randn(self.K)
-				C_hat[:,:,i] = 0.5 * np.identity(self.K) 
+				#C_hat[:,:,i] = 0.5 * np.identity(self.K) 
+				C_hat[:,:,i] = W_hat[:,i].dot(W_hat[:,i].transpose())
 				#C_hat[:,:,i] = self.initialization_Chat() 
 			else :
 				W_hat[:,i] = self.initialization_What()
@@ -262,7 +275,7 @@ class ApproximateMessagePassing(object):
 	def initialization_V_omega(self):
 		V = np.zeros((self.K,self.K,self.P))
 		V_inv = np.zeros((self.K,self.K,self.P))
-		mode_V = 4 
+		mode_V = 5 
 		for l in range(self.P):
 			if mode_V == 1 : # Symmetric diagonal matrix 
 				V_tmp = np.random.randn(self.K,self.K)
@@ -302,10 +315,12 @@ class ApproximateMessagePassing(object):
 		V = np.zeros((self.K,self.K,self.P))
 		V_inv = np.zeros((self.K,self.K,self.P))
 		omega = np.zeros((self.K,self.P))
+		
+		V = self.update_V_tensor()
 		for l in range(self.P):
-			V[:,:,l] = self.compute_V(l)
 			V_inv[:,:,l] = inv(V[:,:,l])
-			omega[:,l] = self.compute_omega_initial(l)
+		omega = self.update_omega_tensor_initial()
+
 		self.V = V
 		self.V_inv = V_inv
 		self.omega = omega
@@ -348,12 +363,18 @@ class ApproximateMessagePassing(object):
 
 		if self.print_Initialization:
 			print('############ INITIALIZATION COMPLETED ############','\n')
+	def initialization_q(self):
+		self.qd = 0
+		self.qa = 0
+		self.q = self.qd * np.identity(self.K) + self.qa/self.K * np.ones((self.K,self.K))
+		(self.evolution_overlap).append(self.q)
+		return self.q
 	############## Update ##############
 	def damping(self,X_new,X_self):
 		alpha = self.damping_coef
 		return  (1-alpha) * (X_self) + ( alpha ) * X_new
 
-	# Sigma, Sigma_inv (K,K,N)
+	## Sigma, Sigma_inv (K,K,N)
 	def update_Sigma_inv_tensor(self):
 		Sigma_inv = - np.einsum('ijl,kl->ijk',self.dgout,np.square(self.X))
 		return (Sigma_inv)
@@ -376,7 +397,7 @@ class ApproximateMessagePassing(object):
 		for i in range(self.N):
 			Sigma[:,:,i] = inv(self.Sigma_inv[:,:,i])
 		return Sigma
-	# T (K,N)
+	## T (K,N)
 	def update_T_tensor(self):
 		tmp_1 = np.einsum('ij,lj->il',self.gout,self.X)
 		term1 = np.einsum('ijl,jl->il',self.Sigma,tmp_1)
@@ -399,7 +420,7 @@ class ApproximateMessagePassing(object):
 		T_tmp =  (self.Sigma[:,:,i]).dot(T_tmp)
 		return T_tmp
 	
-	# Compute gout, dgout
+	## Compute gout, dgout
 	def update_gout_dgout(self):
 		gout = np.zeros((self.K,self.P))
 		dgout = np.zeros((self.K,self.K,self.P))
@@ -422,8 +443,13 @@ class ApproximateMessagePassing(object):
 			
 			# Sign-Sign for K = 1, K=2
 			if (self.K ==1 or self.K==2 ) and not self.MC_activated:  
-				gout_ss = gout_sign_sign(K=self.K,y=y,omega=omega,V=V,V_inv=V_inv)
+				gout_ss = gout_sign_sign(K=self.K,y=y,omega=omega,V=V,V_inv=V_inv,parity=self.parity)
 				(gout, dgout) = gout_ss.gout_dgout()
+
+				#### Replacing V_AMP by Q-q
+				#gout_ss = gout_sign_sign_SE(K=self.K,y=y,omega=omega,q=self.q)
+				#(gout, dgout) = gout_ss.gout_dgout()
+
 			# Sign-Sign for larger K
 			else :
 				## Sum config
@@ -432,12 +458,21 @@ class ApproximateMessagePassing(object):
 				#print('NEED TO CORRECT gout_sign_sign_sum_config - wrong results')
 				
 				## Monte Carlo
-				gout_mc = gout_MC(K=self.K,y=y,omega=omega,V=V,V_inv=V_inv)
-				(gout,dgout) =  gout_mc.gout_dgout_mcquad()
+				#print('Monte Carlo')
+				#gout_mc = gout_MC(K=self.K,y=y,omega=omega,V=V,V_inv=V_inv)
+				#(gout,dgout) =  gout_mc.gout_dgout_mcquad()
+
+				## Complex
+				#gout_ss = gout_sign_sign_complex(K=self.K,y=y,omega=omega,V=V,V_inv=V_inv)
+				#gout,dgout = gout_ss.gout_dgout()
+
+				#gout_ss = gout_sign_sign_complex_SE(K=self.K,y=y,omega=omega,V=V,V_inv=V_inv,q=self.q)
+				#gout,dgout = gout_ss.gout_dgout()
 
 				## Using expansion at large K
-				#gout_ss = gout_sign_sign_largeK(K=self.K,y=y,omega=omega,V=V)
+				#gout_ss = gout_sign_sign_largeK(K=self.K,y=y,omega=omega,V=V,q=self.q)
 				#(gout, dgout) = gout_ss.gout_dgout()
+				print('error')
 
 		elif self.channel == 'linear-relu':
 			V = self.V[:,:,l]
@@ -454,7 +489,7 @@ class ApproximateMessagePassing(object):
 
 		return (gout , dgout)
 
-	# What (K,N) , Chat (K,K,N)
+	## What (K,N) , Chat (K,K,N)
 	def update_What_Chat(self): # Update messages
 		W_hat = np.zeros((self.K,self.N))
 		C_hat = np.zeros((self.K,self.K,self.N))
@@ -532,7 +567,7 @@ class ApproximateMessagePassing(object):
 			fC = W_squared_avg/Z - fW.reshape(self.K,1).dot(fW.reshape(self.K,1).transpose())
 		return ( fW , fC )
 
-	# V, Vinv (K,K,P)
+	## V, Vinv (K,K,P)
 	def update_V_tensor(self):
 		V = np.einsum('ijl,lk->ijk',self.C_hat,np.square(self.X)) 
 		#V_inv = np.zeros((self.K,self.K,self.P))
@@ -561,26 +596,19 @@ class ApproximateMessagePassing(object):
 		#V_tmp = np.sum([(self.X[i,l])**2 * self.C_hat[:,:,i] for i in range(self.N) ],axis=0)
 		return V_tmp
 
-	def V_committee_sym(self,V_tensor_old):
-		V_tensor = np.zeros((self.K,self.K,self.P))
-		for i in range(self.P):
-			V = V_tensor_old[:,:,i]
-			diag = np.diag(V)
-			off_diag = (np.sum(V) - np.sum(diag) )/(self.K**2 - self.K)
-			V_new = np.ones((self.K,self.K)) * off_diag - np.diag(np.ones((self.K))*off_diag) + np.diag(diag)
-			V_tensor[:,:,i] = V_new 
-		return V_tensor
-
-	# Omega (K,P)
+	## Omega (K,P)
 	def update_omega_tensor(self):
-		#ATTENTION : SIGMA, SIMGA_Inv MISSING, but seems to commute!  
+		#print('CHECK that matrices commute!') 
+		#print((self.Sigma_inv[:,:,i].dot(self.C_hat[:,:,i])).dot(self.Sigma[:,:,i]),self.C_hat[:,:,i])
 		term1 = np.einsum('ij,jl->il',self.W_hat,self.X)
-		#term_C_Sigma = np.einsum('ijk,jik->ijk',self.C_hat,self.Sigma)
-		#term_Sigma_inv_C_Sigma = np.einsum('ijk,jik->ijk',self.Sigma_inv,term_C_Sigma)
 		term_Sigma_inv_C_Sigma = self.C_hat
 		tmp = np.einsum('ijk,jl->ikl',term_Sigma_inv_C_Sigma,self.gout)
 		term2 = np.einsum('ijl,jl->il',tmp,np.square(self.X))
 		omega = term1 - term2
+		return omega
+	def update_omega_tensor_initial(self): 
+		term1 = np.einsum('ij,jl->il',self.W_hat,self.X)
+		omega = term1
 		return omega
 	def update_omega(self):
 		omega = np.zeros((self.K,self.P))
@@ -780,16 +808,22 @@ class ApproximateMessagePassing(object):
 			print('\n')
 
 		end = time.time() 
-		#if self.print_Running :
-			#print('Time ellapsed for the step =',end - start_0)
+		if self.print_Running :
+			print('Time ellapsed for the step =',end - start_0)
 
 		return (self.W_hat,self.C_hat,self.V,self.V_inv,self.omega,self.Sigma,self.Sigma_inv,self.T,self.gout,self.dgout)
 	def AMP_iteration(self):
 		print('K=',self.K,'PW=',self.PW_choice,'alpha=',self.alpha)
-		print('Start AMP:',time.ctime())
+		print('Start AMP')
+
 		difference , step , stop = 10 , 0 , False
+		if self.print_Running:
+			print('K=',self.K,'PW=',self.PW_choice,'alpha=',self.alpha)
+			print('Start:',time.ctime())
 		self.start = time.ctime()
-		q = self.overlap()
+		
+		#q = self.overlap()
+		q = self.initialization_q()
 		step += 1
 
 		AMP_storage_alpha = AMP_data_alpha(self.K,self.PW_choice,self.N,1)
@@ -797,9 +831,8 @@ class ApproximateMessagePassing(object):
 			save_object(AMP_storage_alpha,self.file_name)	 
 
 		while step < self.N_step_AMP  and stop == False and difference > self.precision_q:
-			step_ = step
-			#if self.print_Running:
-			#	print('Step = ',step)
+			if self.print_Running:
+				print('Step = ',step)
 			step += 1
 
 			q = copy.copy(self.evolution_overlap[-1]) 
@@ -813,17 +846,13 @@ class ApproximateMessagePassing(object):
 			else :
 				self.AMP_step_t(step)
 
-			if self.print_Running : 
-				self.print_matrix(self.q,'q_AMP=')
-
 			# Compute difference for convergence
 			self.overlap()
 			difference_q = norm(self.q-q)
 			difference_What = norm(self.W_hat-W_hat)
 			if self.print_Running:
-				print('Step =',step_,'Diff_q =',difference_q,'Diff_What =',difference_What)
-				#print('difference q =',difference_q)
-				#print('difference What =',difference_What)
+				print('difference q =',difference_q)
+				print('difference What =',difference_What)
 			difference = difference_q
 			self.difference = difference
 
@@ -839,7 +868,6 @@ class ApproximateMessagePassing(object):
 				if np.amax(self.q) > self.threshold_q_stop and step > 25 :
 					stop = True
 
-		self.print_matrix(self.q,'Final overlap: q_AMP=')
 		print('End AMP')
 
 	def overlap(self):
@@ -847,15 +875,12 @@ class ApproximateMessagePassing(object):
 		q = 1/self.N * What.dot(What.transpose())
 		(self.evolution_overlap).append(q)
 		self.q = q
-		#if self.print_Running:
-			#self.print_matrix(self.q,'q_AMP=')
+		if self.print_Running:
+			self.print_matrix(self.q,'q_AMP=')
 		return q
 	############## Annex functions ##############
 	def check_is_definite_positive(self,M):
 		is_def = np.all(np.linalg.eigvals(M) > 0)
-		return is_def
-	def check_is_definite_negative(self,M):
-		is_def = np.all(np.linalg.eigvals(M) < 0)
 		return is_def
 	def print_matrix(self,M,txt):
 		print(txt)
@@ -865,7 +890,6 @@ class ApproximateMessagePassing(object):
 			n = len(M)
 		for i in range(n):
 			print(M[i,:])
-	
 	def check_V_is_definite_positive(self):
 		not_def = []
 		for l in range(self.P):
@@ -896,7 +920,6 @@ class ApproximateMessagePassing(object):
 		return Y_hat
 	# Compute the generalization error for a test set of size N_samples
 	def gen_error(self,N_samples):
-		tab_gen = []
 		print('Start Gen Error')
 		gen_error = 0 
 		for i in range(N_samples):
@@ -907,14 +930,14 @@ class ApproximateMessagePassing(object):
 			Y = self.phi_out(X_new)
 			#print('#',i,'Y=',Y,'Yhat=',Y_hat)
 			gen_error += (Y-Y_hat)**2
-			tab_gen.append(0.5*gen_error / (i+1))
 		gen_error *= 0.5 / N_samples
 		print('End Gen Error')
-		print('Generalization Error =',gen_error[0])
-		return gen_error,tab_gen
+		print('Gen Error=',gen_error)
+		return gen_error
 
-	def plot_q(self,obj_SE):
-		title = r'$q_{AMP}(t)$ vs $q_{SE}(t)$ at $\alpha=$'+str(self.alpha)+' K='+str(self.K)
+	### Plot evolution q ###
+	def plot_q(self):
+		title = r'AMP - $q_{AMP}(t)$ at $\alpha=$'+str(self.alpha)+' K='+str(self.K)
 		Fontsize = 25
 		Fontsize_ticks = 20
 
@@ -928,55 +951,19 @@ class ApproximateMessagePassing(object):
 		for i in range(self.K):
 			for j in range(self.K):
 				data = tab_q[:,i,j];
-				ax1.plot(tab_t,data,'-',color=colors[i,j],Markersize =3, Linewidth=1.5,label=r'AMP - $q$['+str(i)+','+str(j)+']')
+				ax1.plot(tab_t[1:],data[1:],'-o',color=colors[i,j],Markersize =3, Linewidth=1.5,label=r'$q$['+str(i)+','+str(j)+']')
 
-		ax1.plot([min(tab_t),max(tab_t)],[obj_SE.q[0,0],obj_SE.q[0,0]],'--',color=colors[1,1],label=r'SE - $q$['+str(1)+','+str(1)+']')
-		ax1.plot([min(tab_t),max(tab_t)],[obj_SE.q[0,1],obj_SE.q[0,1]],'--',color=colors[1,0],label=r'SE - $q$['+str(1)+','+str(0)+']')
 		ax1.set_xlabel(r'time $t$',fontsize=Fontsize)
-		ax1.set_ylabel(r'$q^t$',fontsize=Fontsize)
-		plt.legend(loc='best', fontsize=17.5)
+		ax1.set_ylabel(r'$q$',fontsize=Fontsize)
+		plt.legend(loc='best', fontsize=Fontsize)
 		plt.title(title,fontsize=Fontsize)
-		ax1.set_ylim([0,1])
+		ax1.set_ylim([0,np.amax(tab_q)*1.1])
 		ax1.set_xlim([0,max(tab_t)])
 		ax1.tick_params(labelsize=Fontsize_ticks)
 
-	def plot_gen_error(self,tab_gen_AMP,gen_SE):
-		title = r'Generalization error AMP vs SE at $\alpha=$'+str(self.alpha)+' K='+str(self.K)
-		Fontsize = 25
-		Fontsize_ticks = 20
-
-		fig, ax1 = plt.subplots(figsize=[8,8])
-		colors = np.array([ [dc, cr ] ,[db , do ]   ])
-
-		n = len(tab_gen_AMP);
-		tab_t = np.arange(0,n,1);
-
-		ax1.plot(tab_t,tab_gen_AMP,'--',color='k',Markersize =3, Linewidth=1.5,label=r'AMP - $\epsilon_g^t(\alpha)$')
-		ax1.plot([min(tab_t),max(tab_t)],[gen_SE,gen_SE],'-',color='r',Markersize =3, Linewidth=1.5,label=r'SE - $\epsilon_g^t(\alpha)$')
-
-		ax1.set_xlabel(r'$N_{samples}$',fontsize=Fontsize)
-		ax1.set_ylabel(r'$\epsilon_g$',fontsize=Fontsize)
-		plt.legend(loc='best', fontsize=17.5)
-		plt.title(title,fontsize=Fontsize)
-		ax1.set_ylim([min(tab_gen_AMP),max(tab_gen_AMP)*1.1])
-		ax1.set_xlim([0,max(tab_t)])
-		ax1.tick_params(labelsize=Fontsize_ticks)
-
-	def get_all_backup(self,path_data):
-		res = os.chdir(path_data)
-		list_files = sorted(sorted([s for s in os.listdir() if s.endswith('.pkl')], key=os.path.getmtime))
-		step = 0
-		tab_alpha = np.zeros(len(list_files))
-
-		for file in list_files:
-			print(file)
-			AMP_backup = load_object(file)
-			alpha = AMP_backup.alpha
-			tab_alpha[step] = alpha
-			step +=1
-		self.tab_alpha = tab_alpha
-		self.tab_files = list_files
-		os.chdir('../../')
+		plt.show(block=False)
+		input("Press Enter to continue...")
+		plt.close()
 
 ################################### Storage ###################################
 class AMP_data(object):
@@ -1013,7 +1000,7 @@ class AMP_data(object):
 				ax1.plot(tab_alpha,data,'.',color=colors[i,j],Markersize =2, Linewidth=1,label=r'$q$['+str(i)+','+str(j)+']')
 
 		ax1.set_xlabel(r'$\alpha$',fontsize=Fontsize)
-		ax1.set_ylabel(r'$q_{AMP}^t$',fontsize=Fontsize)
+		ax1.set_ylabel(r'$q$',fontsize=Fontsize)
 		plt.legend(loc='best', fontsize=Fontsize)
 		plt.title(title,fontsize=Fontsize)
 		ax1.set_ylim([0,1])

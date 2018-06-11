@@ -1,5 +1,13 @@
 import paths
 
+import warnings
+warnings.filterwarnings("ignore")
+
+import platform
+if platform.system() == 'Darwin':
+	import matplotlib as mpl
+	mpl.use('TkAgg')
+
 ################################### LIBRARIES ###################################
 ######## MATH and SYSTEM ########
 ### System libraries
@@ -32,10 +40,6 @@ import pickle
 ### Monte Carlo
 from skmonaco import mcquad, mcimport
 
-import platform
-if platform.system() == 'Darwin':
-	import matplotlib as mpl
-	mpl.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib import rc
 #import seaborn as sns
