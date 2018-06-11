@@ -186,25 +186,47 @@ class ApproximateMessagePassing(object):
 	############## Initialisation ##################
 	# Global intitialization
 	def initialization(self):
-		print('Initialization')
+		print('Start initialization')
 		if self.print_Initialization :
 			print('################# INITIALIZATION #################','\n')
 			print('### Generate X, Y, W2, W1 ###')
 
-		self.generate_W2_W1()
-		self.generate_X()
-		self.generate_Y()
-			
-		self.initialization_What_Chat()
-		self.initialization_V_omega()
-		self.check_V_is_definite_positive()
+		mode = 1
 
-		self.initialization_gout_dgout() 
+		if mode == 2 : 
+			print('Mode 2')
+			try : 
+				path = 'Data/BackupObj_AMP_'+ self.PW_choice +'_K='+ str(self.K)+'/'
+				self.get_all_backup(path)
+				print(self.tab_alpha)
+				tab = self.tab_alpha
+				index = (np.abs(tab-self.alpha)).argmin()
+				print('Succeeded to load old objects : ','Nearest alpha=',tab[index])
+				nearest_obj = load_object('Data/BackupObj_AMP_'+ self.PW_choice +'_K='+ str(self.K)+'/'+self.tab_files[index])
+				dict_ = {key:value for key, value in nearest_obj.__dict__.items()}
+				print(dict_)
+				#self.initialization_backup(nearest_obj)
 
-		self.initialization_Sigma_T()
+			except :
+				print('Mode 2 Failed')
+				mode = 1
+
+		if mode == 1 :
+			self.generate_W2_W1()
+			self.generate_X()
+			self.generate_Y()
+		
+			self.initialization_What_Chat()
+			self.initialization_V_omega()
+			self.check_V_is_definite_positive()
+
+			self.initialization_gout_dgout() 
+
+			self.initialization_Sigma_T()
 
 		if self.print_Initialization:
 			print('############ INITIALIZATION COMPLETED ############','\n')
+		print('Initialization succeeded','\n')
 	# Single intitialization
 	def initialization_What_Chat(self):
 		W_hat = np.zeros((self.K,self.N))
@@ -793,7 +815,8 @@ class ApproximateMessagePassing(object):
 			else :
 				self.AMP_step_t(step)
 
-			self.print_matrix(self.q,'q_AMP=')
+			if self.print_Running : 
+				self.print_matrix(self.q,'q_AMP=')
 
 			# Compute difference for convergence
 			self.overlap()
@@ -890,8 +913,8 @@ class ApproximateMessagePassing(object):
 		print('Generalization Error =',gen_error[0])
 		return gen_error
 
-	def plot_q(self):
-		title = r'AMP - $q_{AMP}(t)$ at $\alpha=$'+str(self.alpha)+' K='+str(self.K)
+	def plot_q(self,obj_SE):
+		title = r'$q_{AMP}(t)$ vs $q_{SE}(t)$ at $\alpha=$'+str(self.alpha)+' K='+str(self.K)
 		Fontsize = 25
 		Fontsize_ticks = 20
 
@@ -907,13 +930,31 @@ class ApproximateMessagePassing(object):
 				data = tab_q[:,i,j];
 				ax1.plot(tab_t,data,'-',color=colors[i,j],Markersize =3, Linewidth=1.5,label=r'$q$['+str(i)+','+str(j)+']')
 
+		ax1.plot([min(tab_t),max(tab_t)],[obj_SE.q[0,0],obj_SE.q[0,0]],'--',color=colors[1,1])
+		ax1.plot([min(tab_t),max(tab_t)],[obj_SE.q[0,1],obj_SE.q[0,1]],'--',color=colors[1,0])
 		ax1.set_xlabel(r'time $t$',fontsize=Fontsize)
-		ax1.set_ylabel(r'$q_{AMP}^t$',fontsize=Fontsize)
+		ax1.set_ylabel(r'$q^t$',fontsize=Fontsize)
 		plt.legend(loc='best', fontsize=Fontsize)
 		plt.title(title,fontsize=Fontsize)
-		ax1.set_ylim([np.amin(tab_q),np.amax(tab_q)])
+		ax1.set_ylim([0,1])
 		ax1.set_xlim([0,max(tab_t)])
 		ax1.tick_params(labelsize=Fontsize_ticks)
+
+	def get_all_backup(self,path_data):
+		res = os.chdir(path_data)
+		list_files = sorted(sorted([s for s in os.listdir() if s.endswith('.pkl')], key=os.path.getmtime))
+		step = 0
+		tab_alpha = np.zeros(len(list_files))
+
+		for file in list_files:
+			print(file)
+			AMP_backup = load_object(file)
+			alpha = AMP_backup.alpha
+			tab_alpha[step] = alpha
+			step +=1
+		self.tab_alpha = tab_alpha
+		self.tab_files = list_files
+		os.chdir('../../')
 
 ################################### Storage ###################################
 class AMP_data(object):

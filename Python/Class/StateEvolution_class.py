@@ -160,7 +160,7 @@ class StateEvolution(object):
 					self.get_all_backup(path,print_load=False)
 					tab = self.tab_alpha
 					index = (np.abs(tab-self.alpha)).argmin()
-					print('Succeed to load old objects : ','Nearest alpha=',tab[index])
+					print('Succeeded to load old objects : ','Nearest alpha=',tab[index])
 
 					# If very close to perfect generalization, reinitialize it
 					if np.amax(self.tab_q[:,:,index]) > 0.95 :
@@ -184,7 +184,7 @@ class StateEvolution(object):
 			if not test_spd :
 				print('Wrong initialization')
 			else : 
-				print('Initialization succeed','\n')
+				print('Initialization succeeded','\n')
 				#self.print_matrix(self.q,'q=')
 				#self.print_matrix(self.qhat,'qhat=')
 	def initialization_test(self):
@@ -300,12 +300,13 @@ class StateEvolution(object):
 
 			## Difference with previous step
 			self.difference = self.matrix_difference(q_tmp)
-			print('Step = ',self.step,'diff q =',self.difference)
+			if self.print_running:
+				print('Step = ',self.step,'diff q =',self.difference)
 
 			if self.save_backup_running :
 				save_object(self,self.filename_object)
 
-		self.print_matrix(self.q,'Final overlap q=')
+		self.print_matrix(self.q,'Final overlap q_SE=')
 		print('End SE')
 		# Print parameters
 		#print('K=',self.K,'PW=',self.PW_choice,'alpha=',self.alpha,'channel=',self.channel)

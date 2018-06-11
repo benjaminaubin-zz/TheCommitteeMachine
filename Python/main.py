@@ -4,21 +4,21 @@ from StateEvolution_class import *
 
 
 ### AMP
-def run_AMP(K,PW_choice,N,alpha,print_Running):    
-    AMP = ApproximateMessagePassing(K=K,PW_choice=PW_choice,N=N,alpha=alpha,seed=False,MC_activated=False,save_backup_running=False,print_Running=print_Running)
+def run_AMP(K,PW_choice,N,alpha,verbose):    
+    AMP = ApproximateMessagePassing(K=K,PW_choice=PW_choice,N=N,alpha=alpha,seed=False,MC_activated=False,save_backup_running=False,print_Running=verbose)
     AMP.N_step_AMP = N_step_AMP
     AMP.initialization()
     AMP.AMP_iteration()
     return AMP
-def plot_q(obj):
-    obj.plot_q()
+def plot_q(obj_AMP,obj_SE):
+    obj_AMP.plot_q(obj_SE)
 # Compute Generalization error AMP
 def run_gen_error_AMP(obj,K,PW_choice,N,alpha,N_samples_gen_error): 
     gen_error = obj.gen_error(N_samples_gen_error)
 
 ### SE
-def run_SE(K,PW_choice,alpha,print_Running):
-    SE = StateEvolution(K=K,PW_choice=PW_choice,alpha=alpha,channel='sign-sign',save_backup_running=False,seed=False,committee_symmetry=True,print_running=print_Running) 
+def run_SE(K,PW_choice,alpha,verbose):
+    SE = StateEvolution(K=K,PW_choice=PW_choice,alpha=alpha,channel='sign-sign',save_backup_running=False,seed=False,committee_symmetry=True,print_running=verbose) 
     SE.precision = 1e-5
     SE.initialization_mode = 5
     SE.initialization()
@@ -29,8 +29,8 @@ def run_gen_error_SE(obj):
     
 
 ### FOR THE DEMO 
-N_step_AMP = 250 # max number of iterations
-print_Running = True
+N_step_AMP = 100 # max number of iterations
+verbose = True
 
 
 demo = True
@@ -40,5 +40,5 @@ if not demo :
     N = 10000 
     alpha = 1.8
 
-    obj_AMP = run_AMP(K,PW_choice,N,alpha,print_Running)
-    #obj_SE = run_SE(K,PW_choice,alpha,print_Running)
+    obj_AMP = run_AMP(K,PW_choice,N,alpha,verbose)
+    #obj_SE = run_SE(K,PW_choice,alpha,verbose)
