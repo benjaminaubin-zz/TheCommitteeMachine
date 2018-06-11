@@ -226,7 +226,7 @@ class ApproximateMessagePassing(object):
 
 		if self.print_Initialization:
 			print('############ INITIALIZATION COMPLETED ############','\n')
-		print('Initialization succeeded','\n')
+		print('Successful initialization','\n')
 	# Single intitialization
 	def initialization_What_Chat(self):
 		W_hat = np.zeros((self.K,self.N))
@@ -264,7 +264,7 @@ class ApproximateMessagePassing(object):
 	def initialization_V_omega(self):
 		V = np.zeros((self.K,self.K,self.P))
 		V_inv = np.zeros((self.K,self.K,self.P))
-		mode_V = 5 
+		mode_V = 4 
 		for l in range(self.P):
 			if mode_V == 1 : # Symmetric diagonal matrix 
 				V_tmp = np.random.randn(self.K,self.K)
@@ -898,6 +898,7 @@ class ApproximateMessagePassing(object):
 		return Y_hat
 	# Compute the generalization error for a test set of size N_samples
 	def gen_error(self,N_samples):
+		tab_gen = []
 		print('Start Gen Error')
 		gen_error = 0 
 		for i in range(N_samples):
@@ -908,10 +909,11 @@ class ApproximateMessagePassing(object):
 			Y = self.phi_out(X_new)
 			#print('#',i,'Y=',Y,'Yhat=',Y_hat)
 			gen_error += (Y-Y_hat)**2
+			tab_gen.append(0.5*gen_error / (i+1))
 		gen_error *= 0.5 / N_samples
 		print('End Gen Error')
 		print('Generalization Error =',gen_error[0])
-		return gen_error
+		return gen_error,tab_gen
 
 	def plot_q(self,obj_SE):
 		title = r'$q_{AMP}(t)$ vs $q_{SE}(t)$ at $\alpha=$'+str(self.alpha)+' K='+str(self.K)
@@ -928,15 +930,37 @@ class ApproximateMessagePassing(object):
 		for i in range(self.K):
 			for j in range(self.K):
 				data = tab_q[:,i,j];
-				ax1.plot(tab_t,data,'-',color=colors[i,j],Markersize =3, Linewidth=1.5,label=r'$q$['+str(i)+','+str(j)+']')
+				ax1.plot(tab_t,data,'-',color=colors[i,j],Markersize =3, Linewidth=1.5,label=r'AMP - $q$['+str(i)+','+str(j)+']')
 
-		ax1.plot([min(tab_t),max(tab_t)],[obj_SE.q[0,0],obj_SE.q[0,0]],'--',color=colors[1,1])
-		ax1.plot([min(tab_t),max(tab_t)],[obj_SE.q[0,1],obj_SE.q[0,1]],'--',color=colors[1,0])
+		ax1.plot([min(tab_t),max(tab_t)],[obj_SE.q[0,0],obj_SE.q[0,0]],'--',color=colors[1,1],label=r'SE - $q$['+str(1)+','+str(1)+']')
+		ax1.plot([min(tab_t),max(tab_t)],[obj_SE.q[0,1],obj_SE.q[0,1]],'--',color=colors[1,0],label=r'SE - $q$['+str(1)+','+str(0)+']')
 		ax1.set_xlabel(r'time $t$',fontsize=Fontsize)
 		ax1.set_ylabel(r'$q^t$',fontsize=Fontsize)
-		plt.legend(loc='best', fontsize=Fontsize)
+		plt.legend(loc='best', fontsize=17.5)
 		plt.title(title,fontsize=Fontsize)
 		ax1.set_ylim([0,1])
+		ax1.set_xlim([0,max(tab_t)])
+		ax1.tick_params(labelsize=Fontsize_ticks)
+
+	def plot_gen_error(self,tab_gen_AMP,gen_SE):
+		title = r'Generalization error AMP vs SE at $\alpha=$'+str(self.alpha)+' K='+str(self.K)
+		Fontsize = 25
+		Fontsize_ticks = 20
+
+		fig, ax1 = plt.subplots(figsize=[8,8])
+		colors = np.array([ [dc, cr ] ,[db , do ]   ])
+
+		n = len(tab_gen_AMP);
+		tab_t = np.arange(0,n,1);
+
+		ax1.plot(tab_t,tab_gen_AMP,'--',color='k',Markersize =3, Linewidth=1.5,label=r'AMP - $\epsilon_g^t(\alpha)$')
+		ax1.plot([min(tab_t),max(tab_t)],[gen_SE,gen_SE],'-',color='r',Markersize =3, Linewidth=1.5,label=r'SE - $\epsilon_g^t(\alpha)$')
+
+		ax1.set_xlabel(r'$N_{samples}$',fontsize=Fontsize)
+		ax1.set_ylabel(r'$\epsilon_g$',fontsize=Fontsize)
+		plt.legend(loc='best', fontsize=17.5)
+		plt.title(title,fontsize=Fontsize)
+		ax1.set_ylim([min(tab_gen_AMP),max(tab_gen_AMP)*1.1])
 		ax1.set_xlim([0,max(tab_t)])
 		ax1.tick_params(labelsize=Fontsize_ticks)
 

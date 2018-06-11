@@ -184,7 +184,7 @@ class StateEvolution(object):
 			if not test_spd :
 				print('Wrong initialization')
 			else : 
-				print('Initialization succeeded','\n')
+				print('Successful initialization','\n')
 				#self.print_matrix(self.q,'q=')
 				#self.print_matrix(self.qhat,'qhat=')
 	def initialization_test(self):
@@ -630,6 +630,7 @@ class StateEvolution(object):
 		gen_err_MC_obj.initialize(qd,qa)
 		gen_err = 1/2 * gen_err_MC_obj.gen_err_mcquad()
 		print('alpha=',self.alpha,'gen_err=',gen_err)
+		return gen_err
 
 	################################################## PLOTS ##################################################
 	def get_all_backup(self,path_data,print_load=True):

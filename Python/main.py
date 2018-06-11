@@ -14,7 +14,11 @@ def plot_q(obj_AMP,obj_SE):
     obj_AMP.plot_q(obj_SE)
 # Compute Generalization error AMP
 def run_gen_error_AMP(obj,K,PW_choice,N,alpha,N_samples_gen_error): 
-    gen_error = obj.gen_error(N_samples_gen_error)
+    gen_error , tab_gen_AMP = obj.gen_error(N_samples_gen_error)
+    return tab_gen_AMP
+
+def plot_gen_error(obj_AMP,tab_gen_AMP,gen_error_SE):
+    obj_AMP.plot_gen_error(tab_gen_AMP,gen_error_SE)
 
 ### SE
 def run_SE(K,PW_choice,alpha,verbose):
@@ -25,8 +29,9 @@ def run_SE(K,PW_choice,alpha,verbose):
     SE.SE_iteration()
     return SE
 def run_gen_error_SE(obj): 
-    gen_error = obj.gen_error()
-    
+    gen_error_SE = obj.gen_error()
+    return gen_error_SE
+
 
 ### FOR THE DEMO 
 N_step_AMP = 100 # max number of iterations

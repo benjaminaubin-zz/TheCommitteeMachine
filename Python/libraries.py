@@ -17,7 +17,7 @@ from scipy.special import erfc , erf
 from scipy.linalg import inv , sqrtm , det , norm 
 from scipy.signal import savgol_filter as sgf
 from scipy import real,imag 
-#from sklearn.datasets import make_spd_matrix
+from sklearn.datasets import make_spd_matrix
 #from cmath import exp as cexp
 
 ## Multiprocessing
