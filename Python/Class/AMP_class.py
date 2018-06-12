@@ -50,8 +50,8 @@ class ApproximateMessagePassing(object):
 			self.path_BackupObj = 'Data/BackupObj_AMP_'+ PW_choice +'_K='+ str(K)+'/' 
 		else : 
 			self.path_BackupObj = 'Data/BackupObj_AMP_MC_'+ PW_choice +'_K='+ str(K)+'/' 
-		if not os.path.exists(self.path_BackupObj):
-			os.makedirs(self.path_BackupObj) 
+		#if not os.path.exists(self.path_BackupObj):
+		#	os.makedirs(self.path_BackupObj) 
 
 		self.save_backup_running = save_backup_running
 		self.file_name = self.path_BackupObj  + 'AMP_obj_tmp_'+PW_choice+'_K='+str(K)+'_alpha='+'%.4f'% alpha+'.pkl'
@@ -910,7 +910,7 @@ class ApproximateMessagePassing(object):
 					ax1.plot(tab_t,data,'-',color=colors[i,j],Markersize =3, Linewidth=1.5,label=r'AMP - $q$['+str(i)+','+str(j)+']')
 				else : 
 					ax1.plot(tab_t,data,'-',color=colors[i,j],Markersize =3, Linewidth=1.5)
-		
+
 		ax1.plot([min(tab_t),max(tab_t)],[obj_SE.q[0,1],obj_SE.q[0,1]],'--',color=colors[1,0],label=r'SE - $q$['+str(1)+','+str(0)+']')
 		ax1.plot([min(tab_t),max(tab_t)],[obj_SE.q[0,0],obj_SE.q[0,0]],'--',color=colors[1,1],label=r'SE - $q$['+str(1)+','+str(1)+']')
 		ax1.set_xlabel(r'time $t$',fontsize=Fontsize)

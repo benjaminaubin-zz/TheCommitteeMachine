@@ -96,8 +96,8 @@ class StateEvolution(object):
 		## Save data 
 		self.save_backup_running = save_backup_running		
 		self.path_BackupObj = 'Data/BackupObj_SE_'+ self.PW_choice +'_K='+ str(K)+'/' 
-		if not os.path.exists(self.path_BackupObj):
-			os.makedirs(self.path_BackupObj) 
+		#if not os.path.exists(self.path_BackupObj):
+		#	os.makedirs(self.path_BackupObj) 
 		self.filename_object = self.path_BackupObj + 'SE_backupObject_'+PW_choice+'_K='+str(K)+'_alpha='+'%.4f'% alpha+'.pkl'
 	
 		self.path_Figures = 'Figures/'
