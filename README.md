@@ -8,4 +8,4 @@ Heuristic tools from statistical physics have been used in the past to locate th
 ArXiv link: https://arxiv.org
 
 
-We provide in the notebook 'Demo_AMP_SE_K=2.ipynb' a demo of the AMP algorithm for the committee machine at K=2 and compare it to its State Evolution.
+We provide a demo (Demo_AMP_SE_K=2.ipynb) of the AMP algorithm for the committee machine at K=2 and compare it to its State Evolution.
